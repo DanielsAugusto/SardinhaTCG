@@ -6,7 +6,7 @@ import StockBadge from '../components/StockBadge';
 import { useDebounce } from '../hooks/useDebounce';
 import { deleteProduct, getCategories, getProducts } from '../services/api';
 import type { Category, Product } from '../types';
-import { formatCurrency, formatNumber, getErrorMessage } from '../lib/utils';
+import { describeMovement, formatCurrency, formatNumber, getErrorMessage } from '../lib/utils';
 
 export default function Products() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -199,7 +199,7 @@ export default function Products() {
         initialProductId={movementProduct?.id}
         onClose={() => setMovementProduct(null)}
         onSaved={(movement) => {
-          flash(`${movement.type === 'IN' ? 'Entrada' : 'Saída'} de ${movement.quantity} registrada.`);
+          flash(`${describeMovement(movement)} registrada.`);
           void loadProducts();
         }}
       />

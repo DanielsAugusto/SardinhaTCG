@@ -40,7 +40,12 @@ model StockMovement {
   type      MovementType
   quantity  Int
   reason    String?
+  isSale    Boolean      @default(false)
+  unitPrice Decimal?     @db.Decimal(10, 2)
+  unitCost  Decimal?     @db.Decimal(10, 2)
   productId String
   product   Product      @relation(fields: [productId], references: [id], onDelete: Cascade)
   createdAt DateTime     @default(now())
+
+  @@index([isSale, createdAt])
 }

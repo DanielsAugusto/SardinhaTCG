@@ -1,6 +1,7 @@
 import { HttpError } from './_lib/errors.js';
 import { createHandler, getQueryParam, readJsonBody, sendSuccess } from './_lib/http.js';
 import { prisma } from './_lib/prisma.js';
+import { serializeMovement } from './_lib/serializers.js';
 import { movementQuerySchema, movementSchema } from './_lib/validation.js';
 
 const MAX_RESULTS = 200;
@@ -17,11 +18,11 @@ export default createHandler({
       orderBy: { createdAt: 'desc' },
       take: MAX_RESULTS,
     });
-    sendSuccess(res, movements);
+    sendSuccess(res, movements.map(serializeMovement));
   },
 
   POST: async (req, res) => {
-    const { productId, type, quantity, reason } = movementSchema.parse(readJsonBody(req));
+    const { productId, type, quantity, reason, isSale, unitPrice } = movementSchema.parse(readJsonBody(req));
 
     const movement = await prisma.$transaction(async (tx) => {
       if (type === 'OUT') {
@@ -43,12 +44,22 @@ export default createHandler({
         if (count === 0) throw new HttpError(404, 'Produto não encontrado.');
       }
 
+      // Preço e custo ficam gravados na venda para o lucro não mudar se o cadastro do produto for alterado depois.
+      let saleData = {};
+      if (isSale) {
+        const product = await tx.product.findUniqueOrThrow({
+          where: { id: productId },
+          select: { costPrice: true, salePrice: true },
+        });
+        saleData = { isSale: true, unitCost: product.costPrice, unitPrice: unitPrice ?? product.salePrice };
+      }
+
       return tx.stockMovement.create({
-        data: { productId, type, quantity, reason },
+        data: { productId, type, quantity, reason, ...saleData },
         include: { product: { select: { id: true, name: true, sku: true, quantity: true } } },
       });
     });
 
-    sendSuccess(res, movement, 201);
+    sendSuccess(res, serializeMovement(movement), 201);
   },
 });

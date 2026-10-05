@@ -27,9 +27,25 @@ export interface StockMovement {
   type: MovementType;
   quantity: number;
   reason: string | null;
+  isSale: boolean;
+  unitPrice: number | null;
+  unitCost: number | null;
   productId: string;
   product?: Pick<Product, 'id' | 'name' | 'sku'> & { quantity?: number };
   createdAt: string;
+}
+
+export type SalesPeriod = 'today' | '7d' | '30d' | 'month' | 'all';
+
+export interface SalesSummary {
+  period: SalesPeriod;
+  since: string;
+  unitsSold: number;
+  salesCount: number;
+  revenue: number;
+  cost: number;
+  profit: number;
+  margin: number;
 }
 
 export interface DashboardData {
@@ -41,6 +57,7 @@ export interface DashboardData {
   lowStockCount: number;
   outOfStockCount: number;
   lowStockProducts: Product[];
+  sales: SalesSummary;
 }
 
 export interface ApiResponse<T> {
@@ -65,6 +82,8 @@ export interface MovementInput {
   type: MovementType;
   quantity: number;
   reason: string | null;
+  isSale: boolean;
+  unitPrice?: number;
 }
 
 export interface ProductFilters {

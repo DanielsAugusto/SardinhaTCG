@@ -74,17 +74,31 @@ export const productQuerySchema = z.object({
   categoryId: z.uuid('Categoria inválida.').optional(),
 });
 
-export const movementSchema = z.object({
-  productId: z.uuid('Selecione um produto válido.'),
-  type: z.enum(['IN', 'OUT'], { error: 'Tipo deve ser Entrada ou Saída.' }),
-  quantity: z
-    .number({ error: 'Quantidade deve ser um número.' })
-    .int('Quantidade deve ser inteira.')
-    .min(1, 'Quantidade deve ser maior que zero.')
-    .max(MAX_QUANTITY, 'Quantidade acima do limite.'),
-  reason: optionalText(200, 'Motivo'),
-});
+export const movementSchema = z
+  .object({
+    productId: z.uuid('Selecione um produto válido.'),
+    type: z.enum(['IN', 'OUT'], { error: 'Tipo deve ser Entrada ou Saída.' }),
+    quantity: z
+      .number({ error: 'Quantidade deve ser um número.' })
+      .int('Quantidade deve ser inteira.')
+      .min(1, 'Quantidade deve ser maior que zero.')
+      .max(MAX_QUANTITY, 'Quantidade acima do limite.'),
+    reason: optionalText(200, 'Motivo'),
+    isSale: z.boolean({ error: 'Indicador de venda inválido.' }).default(false),
+    unitPrice: money('Preço unitário de venda').nullish(),
+  })
+  .refine((data) => !data.isSale || data.type === 'OUT', {
+    message: 'Só saídas podem ser registradas como venda.',
+    path: ['isSale'],
+  });
 
 export const movementQuerySchema = z.object({
   productId: z.uuid('Produto inválido.').optional(),
+});
+
+export const SALES_PERIODS = ['today', '7d', '30d', 'month', 'all'] as const;
+export type SalesPeriod = (typeof SALES_PERIODS)[number];
+
+export const dashboardQuerySchema = z.object({
+  period: z.enum(SALES_PERIODS, { error: 'Período inválido.' }).default('month'),
 });

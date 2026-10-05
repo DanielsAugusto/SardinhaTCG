@@ -1,16 +1,39 @@
 import { useCallback, useEffect, useState, type ComponentType } from 'react';
-import { AlertTriangle, Boxes, DollarSign, Loader2, Package, PackageX, RefreshCw, TrendingUp } from 'lucide-react';
+import {
+  AlertTriangle,
+  Banknote,
+  Boxes,
+  DollarSign,
+  Loader2,
+  Package,
+  PackageX,
+  PiggyBank,
+  RefreshCw,
+  ShoppingCart,
+  TrendingUp,
+} from 'lucide-react';
 import { Link } from 'react-router-dom';
 import StockBadge from '../components/StockBadge';
 import { getDashboard } from '../services/api';
-import type { DashboardData } from '../types';
+import type { DashboardData, SalesPeriod } from '../types';
 import { cn, formatCurrency, formatNumber, getErrorMessage } from '../lib/utils';
+
+const PERIODS: { value: SalesPeriod; label: string }[] = [
+  { value: 'today', label: 'Hoje' },
+  { value: '7d', label: '7 dias' },
+  { value: '30d', label: '30 dias' },
+  { value: 'month', label: 'Mês atual' },
+  { value: 'all', label: 'Total' },
+];
+
+const percent = new Intl.NumberFormat('pt-BR', { style: 'percent', maximumFractionDigits: 1 });
 
 interface MetricCardProps {
   label: string;
   value: string;
   icon: ComponentType<{ className?: string }>;
   tone?: 'default' | 'warning' | 'danger' | 'success';
+  hint?: string;
 }
 
 const TONES = {
@@ -20,7 +43,7 @@ const TONES = {
   danger: 'bg-red-100 text-red-700',
 };
 
-function MetricCard({ label, value, icon: Icon, tone = 'default' }: MetricCardProps) {
+function MetricCard({ label, value, icon: Icon, tone = 'default', hint }: MetricCardProps) {
   return (
     <div className="card flex items-center gap-4 p-5">
       <span className={cn('flex h-11 w-11 shrink-0 items-center justify-center rounded-xl', TONES[tone])}>
@@ -29,6 +52,7 @@ function MetricCard({ label, value, icon: Icon, tone = 'default' }: MetricCardPr
       <div className="min-w-0">
         <p className="text-sm text-slate-500">{label}</p>
         <p className="truncate text-xl font-semibold">{value}</p>
+        {hint && <p className="text-xs text-slate-500">{hint}</p>}
       </div>
     </div>
   );
@@ -36,6 +60,7 @@ function MetricCard({ label, value, icon: Icon, tone = 'default' }: MetricCardPr
 
 export default function Dashboard() {
   const [data, setData] = useState<DashboardData | null>(null);
+  const [period, setPeriod] = useState<SalesPeriod>('month');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -43,13 +68,13 @@ export default function Dashboard() {
     setLoading(true);
     setError(null);
     try {
-      setData(await getDashboard());
+      setData(await getDashboard(period));
     } catch (err) {
       setError(getErrorMessage(err));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [period]);
 
   useEffect(() => {
     void load();
@@ -80,6 +105,47 @@ export default function Dashboard() {
 
       {data && (
         <>
+          <section className="space-y-3">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <h2 className="font-semibold">Vendas</h2>
+              <div className="inline-flex flex-wrap gap-1 rounded-lg bg-white p-1 shadow-sm ring-1 ring-slate-200">
+                {PERIODS.map((p) => (
+                  <button
+                    key={p.value}
+                    type="button"
+                    onClick={() => setPeriod(p.value)}
+                    disabled={loading}
+                    className={cn(
+                      'rounded-md px-3 py-1.5 text-xs font-medium transition',
+                      period === p.value ? 'bg-sky-600 text-white' : 'text-slate-600 hover:bg-slate-100',
+                    )}
+                  >
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              <MetricCard
+                label="Itens vendidos"
+                value={formatNumber(data.sales.unitsSold)}
+                icon={ShoppingCart}
+                hint={`${formatNumber(data.sales.salesCount)} venda(s)`}
+              />
+              <MetricCard label="Faturamento" value={formatCurrency(data.sales.revenue)} icon={Banknote} />
+              <MetricCard label="Custo dos vendidos" value={formatCurrency(data.sales.cost)} icon={DollarSign} />
+              <MetricCard
+                label="Lucro"
+                value={formatCurrency(data.sales.profit)}
+                icon={PiggyBank}
+                tone={data.sales.profit >= 0 ? 'success' : 'danger'}
+                hint={data.sales.revenue > 0 ? `Margem de ${percent.format(data.sales.margin)}` : undefined}
+              />
+            </div>
+          </section>
+
+          <h2 className="font-semibold">Estoque</h2>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
             <MetricCard label="Produtos cadastrados" value={formatNumber(data.totalProducts)} icon={Package} />
             <MetricCard label="Itens em estoque" value={formatNumber(data.totalItems)} icon={Boxes} />

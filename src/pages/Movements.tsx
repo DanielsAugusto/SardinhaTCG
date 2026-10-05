@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ArrowDownCircle, ArrowUpCircle, Loader2 } from 'lucide-react';
+import { ArrowDownCircle, ArrowUpCircle, Loader2, ShoppingCart } from 'lucide-react';
 import MovementForm from '../components/MovementForm';
 import { getMovements, getProducts } from '../services/api';
 import type { Product, StockMovement } from '../types';
-import { formatDateTime, formatNumber, getErrorMessage } from '../lib/utils';
+import { describeMovement, formatCurrency, formatDateTime, formatNumber, getErrorMessage } from '../lib/utils';
 
 export default function Movements() {
   const [movements, setMovements] = useState<StockMovement[]>([]);
@@ -42,7 +42,7 @@ export default function Movements() {
   }, [loadProducts]);
 
   function handleSaved(movement: StockMovement) {
-    setNotice(`${movement.type === 'IN' ? 'Entrada' : 'Saída'} de ${movement.quantity} registrada para ${movement.product?.name ?? 'o produto'}.`);
+    setNotice(`${describeMovement(movement)} registrada para ${movement.product?.name ?? 'o produto'}.`);
     window.setTimeout(() => setNotice(null), 3000);
     void loadMovements();
     void loadProducts();
@@ -87,19 +87,20 @@ export default function Movements() {
                 <th className="px-5 py-3">Produto</th>
                 <th className="px-5 py-3">Tipo</th>
                 <th className="px-5 py-3 text-right">Qtd.</th>
+                <th className="px-5 py-3 text-right">Valor</th>
                 <th className="px-5 py-3">Motivo</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {loading && movements.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-5 py-10 text-center text-slate-500">
+                  <td colSpan={6} className="px-5 py-10 text-center text-slate-500">
                     <Loader2 className="mx-auto h-5 w-5 animate-spin" />
                   </td>
                 </tr>
               ) : movements.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-5 py-10 text-center text-slate-500">
+                  <td colSpan={6} className="px-5 py-10 text-center text-slate-500">
                     Nenhuma movimentação registrada.
                   </td>
                 </tr>
@@ -116,6 +117,10 @@ export default function Movements() {
                         <span className="inline-flex items-center gap-1 text-emerald-700">
                           <ArrowDownCircle className="h-4 w-4" /> Entrada
                         </span>
+                      ) : m.isSale ? (
+                        <span className="inline-flex items-center gap-1 text-sky-700">
+                          <ShoppingCart className="h-4 w-4" /> Venda
+                        </span>
                       ) : (
                         <span className="inline-flex items-center gap-1 text-red-700">
                           <ArrowUpCircle className="h-4 w-4" /> Saída
@@ -123,6 +128,20 @@ export default function Movements() {
                       )}
                     </td>
                     <td className="px-5 py-3 text-right font-semibold">{formatNumber(m.quantity)}</td>
+                    <td className="whitespace-nowrap px-5 py-3 text-right">
+                      {m.isSale && m.unitPrice !== null ? (
+                        <>
+                          <p className="font-medium">{formatCurrency(m.unitPrice * m.quantity)}</p>
+                          {m.unitCost !== null && (
+                            <p className="text-xs text-emerald-700">
+                              lucro {formatCurrency((m.unitPrice - m.unitCost) * m.quantity)}
+                            </p>
+                          )}
+                        </>
+                      ) : (
+                        <span className="text-slate-400">-</span>
+                      )}
+                    </td>
                     <td className="px-5 py-3 text-slate-600">{m.reason ?? '-'}</td>
                   </tr>
                 ))

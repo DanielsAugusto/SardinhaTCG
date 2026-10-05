@@ -6,6 +6,7 @@ import type {
   Product,
   ProductFilters,
   ProductInput,
+  SalesPeriod,
   StockMovement,
 } from '../types';
 
@@ -94,4 +95,4 @@ export const createMovement = (input: MovementInput) =>
   request<StockMovement>('/movements', { method: 'POST', body: json(input) });
 
 // Dashboard
-export const getDashboard = () => request<DashboardData>('/dashboard');
+export const getDashboard = (period: SalesPeriod) => request<DashboardData>(`/dashboard${toQuery({ period })}`);
