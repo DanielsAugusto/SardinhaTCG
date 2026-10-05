@@ -22,13 +22,25 @@ function decodePasswordHash(encoded: string): string {
   return /^\$2[aby]\$\d{2}\$[./A-Za-z0-9]{53}$/.test(hash) ? hash : '';
 }
 
-function getAuthConfig(): AuthConfig {
-  const secret = process.env.JWT_SECRET ?? '';
-  const adminUsername = process.env.ADMIN_USERNAME ?? '';
-  const adminPasswordHash = decodePasswordHash(process.env.ADMIN_PASSWORD_HASH ?? '');
+/** Tolera espaços e aspas coladas junto com o valor no painel da Vercel. */
+function readEnv(name: string): string {
+  const value = (process.env[name] ?? '').trim();
+  const quoted = value.length >= 2 && (value[0] === '"' || value[0] === "'") && value.at(-1) === value[0];
+  return quoted ? value.slice(1, -1).trim() : value;
+}
 
-  if (secret.length < MIN_SECRET_LENGTH || !adminUsername || !adminPasswordHash) {
-    console.error('[auth] Configuração ausente ou inválida: JWT_SECRET, ADMIN_USERNAME ou ADMIN_PASSWORD_HASH.');
+function getAuthConfig(): AuthConfig {
+  const secret = readEnv('JWT_SECRET');
+  const adminUsername = readEnv('ADMIN_USERNAME');
+  const adminPasswordHash = decodePasswordHash(readEnv('ADMIN_PASSWORD_HASH'));
+
+  const problems: string[] = [];
+  if (secret.length < MIN_SECRET_LENGTH) problems.push(`JWT_SECRET (ausente ou com menos de ${MIN_SECRET_LENGTH} caracteres)`);
+  if (!adminUsername) problems.push('ADMIN_USERNAME (ausente)');
+  if (!adminPasswordHash) problems.push('ADMIN_PASSWORD_HASH (ausente ou inválido; gere com npm run hash-password)');
+
+  if (problems.length > 0) {
+    console.error(`[auth] Configuração inválida: ${problems.join('; ')}`);
     throw new HttpError(500, 'Servidor não configurado corretamente.');
   }
 
