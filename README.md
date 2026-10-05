@@ -12,7 +12,8 @@ Sistema de controle de estoque em React + Vite (TypeScript), Tailwind CSS, Prism
 
 2. Preencha o arquivo `.env` (use `.env.example` como modelo):
 
-   - `DATABASE_URL`: connection string **Pooled** do Neon.
+   - `DATABASE_URL`: connection string **Pooled** do Neon (host com `-pooler`), usada pelo app.
+   - `DIRECT_URL`: a mesma string **sem** `-pooler` no host, usada só pelas migrações (o Prisma precisa de conexão direta para migrar).
    - `JWT_SECRET`: segredo aleatório com 32+ caracteres:
      ```bash
      node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"
@@ -26,7 +27,7 @@ Sistema de controle de estoque em React + Vite (TypeScript), Tailwind CSS, Prism
    npx prisma migrate dev --name init_schema
    ```
 
-   Se a migração travar ou falhar usando a URL Pooled, rode o comando com a connection string **direta** (sem `-pooler` no host) temporariamente no `DATABASE_URL`.
+   Nos deploys da Vercel, o script `vercel-build` aplica migrações pendentes automaticamente (`prisma migrate deploy`, via `DIRECT_URL`).
 
 4. Suba o ambiente de desenvolvimento:
 
@@ -40,8 +41,8 @@ Sistema de controle de estoque em React + Vite (TypeScript), Tailwind CSS, Prism
 
 1. Suba o código para o GitHub (o `.env` está no `.gitignore` e não deve ser versionado).
 2. Importe o repositório na Vercel.
-3. Em **Settings > Environment Variables**, cadastre `DATABASE_URL`, `JWT_SECRET`, `ADMIN_USERNAME` e `ADMIN_PASSWORD_HASH` (na Vercel, cole só o valor, sem aspas).
-4. Clique em **Deploy**. O build roda `prisma generate && tsc -b && vite build`.
+3. Em **Settings > Environment Variables**, cadastre `DATABASE_URL`, `DIRECT_URL`, `JWT_SECRET`, `ADMIN_USERNAME` e `ADMIN_PASSWORD_HASH` (na Vercel, cole só o valor, sem aspas).
+4. Clique em **Deploy**. O build roda `prisma generate && prisma migrate deploy && tsc -b && vite build`.
 
 ## Segurança
 
